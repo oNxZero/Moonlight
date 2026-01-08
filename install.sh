@@ -29,6 +29,12 @@ if [ "${1:-}" != "--no-copy" ] && [ "$SCRIPT_DIR" != "$TARGET_DIR" ]; then
     exec ./install.sh --no-copy
 fi
 
+echo -e "${GREEN}Cleaning up repository artifacts...${NC}"
+
+rm -rf "$TARGET_DIR/.git"        2>/dev/null || true
+rm -rf "$TARGET_DIR/assets"      2>/dev/null || true
+rm -f  "$TARGET_DIR/README.md"   2>/dev/null || true
+
 echo -e "${GREEN}[1/5] Installing system dependencies...${NC}"
 
 if command -v dnf >/dev/null; then
@@ -64,7 +70,7 @@ EOF
 sudo udevadm control --reload-rules
 sudo udevadm trigger
 
-echo -e "${GREEN}[4/5] Generating assets...${NC}"
+echo -e "${GREEN}[4/5] Preparing launcher...${NC}"
 
 cat > start.sh <<EOF
 #!/bin/bash
@@ -72,15 +78,6 @@ cd "$TARGET_DIR"
 exec /usr/bin/python3 main.py
 EOF
 chmod +x start.sh
-
-cat > icon.svg <<'EOF'
-<?xml version="1.0" encoding="UTF-8"?>
-<svg width="64" height="64" viewBox="0 0 24 24"
-xmlns="http://www.w3.org/2000/svg">
-<path fill="#cad3f5"
-d="M12 2a10 10 0 100 20 10 10 0 000-20z"/>
-</svg>
-EOF
 
 echo -e "${GREEN}[5/5] Registering application...${NC}"
 APP_DIR="$HOME/.local/share/applications"
