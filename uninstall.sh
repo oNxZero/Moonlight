@@ -6,60 +6,50 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TARGET_DIR="$HOME/Moonlight"
+DESKTOP_FILE="$HOME/.local/share/applications/Moonlight.desktop"
+RULE_FILE="/etc/udev/rules.d/99-moonlight.rules"
 
 echo -e "${BLUE}=========================================${NC}"
 echo -e "${BLUE}       Moonlight Uninstaller             ${NC}"
 echo -e "${BLUE}=========================================${NC}"
 
 echo -e "${GREEN}[1/4] Removing Desktop Shortcut...${NC}"
-if [ -f "$HOME/.local/share/applications/Moonlight.desktop" ]; then
-    rm "$HOME/.local/share/applications/Moonlight.desktop"
-    echo "Removed shortcut."
-elif [ -f "$HOME/.local/share/applications/Moonlight.desktop" ]; then
-    rm "$HOME/.local/share/applications/Moonlight.desktop"
-    echo "Removed shortcut."
+if [ -f "$DESKTOP_FILE" ]; then
+    rm -f "$DESKTOP_FILE"
+    echo "Removed Moonlight.desktop"
 else
-    echo -e "${YELLOW}No shortcut found (Skipping).${NC}"
+    echo -e "${YELLOW}No desktop entry found (Skipping).${NC}"
 fi
 
-echo -e "${GREEN}[2/4] Removing Configuration...${NC}"
-if [ -d "$HOME/.config/Moonlight" ]; then
-    rm -rf "$HOME/.config/Moonlight"
-    echo "Removed ~/.config/Moonlight"
-else
-    echo -e "${YELLOW}No config found (Skipping).${NC}"
-fi
-
-echo -e "${GREEN}[3/4] Removing System Permissions...${NC}"
-RULE_FILE="/etc/udev/rules.d/99-Moonlight.rules"
-
+echo -e "${GREEN}[2/4] Removing System Permissions...${NC}"
 if [ -f "$RULE_FILE" ]; then
-    echo -e "${YELLOW}Admin access required to remove system rules.${NC}"
-    if sudo rm "$RULE_FILE"; then
+    echo -e "${YELLOW}Admin access required to remove udev rules.${NC}"
+    if sudo rm -f "$RULE_FILE"; then
         sudo udevadm control --reload-rules
         sudo udevadm trigger
-        echo "Rules removed and system updated."
+        echo "udev rules removed and reloaded."
     else
-        echo -e "${RED}Failed to remove rules. You may need to remove '$RULE_FILE' manually.${NC}"
+        echo -e "${RED}Failed to remove udev rules. Manual removal may be required.${NC}"
     fi
 else
-    echo -e "${YELLOW}No permissions found (Skipping).${NC}"
+    echo -e "${YELLOW}No udev rules found (Skipping).${NC}"
 fi
 
-echo -e "${GREEN}[4/4] Removing Installation Files...${NC}"
-if [ -d "$SCRIPT_DIR" ]; then
-    cd .. || exit 1
-    
-    rm -rf "$SCRIPT_DIR"
-    echo "Deleted $SCRIPT_DIR"
+echo -e "${GREEN}[3/4] Removing Installation Files...${NC}"
+if [ -d "$TARGET_DIR" ]; then
+    rm -rf "$TARGET_DIR"
+    echo "Removed $TARGET_DIR"
 else
-    echo -e "${RED}Error: Could not locate installation folder.${NC}"
+    echo -e "${YELLOW}Install directory not found (Skipping).${NC}"
 fi
+
+echo -e "${GREEN}[4/4] Final Notes...${NC}"
+echo "Your user remains in the 'input' group."
+echo "If you added it only for Moonlight and want to remove it manually:"
+echo "  sudo gpasswd -d $USER input"
+echo "Then log out and log back in."
 
 echo -e "${BLUE}=========================================${NC}"
 echo -e "${GREEN}        UNINSTALLATION COMPLETE          ${NC}"
 echo -e "${BLUE}=========================================${NC}"
-echo -e "${YELLOW}You are currently in a deleted directory.${NC}"
-echo "Please type 'cd ..' to return to your previous folder."
-echo ""
