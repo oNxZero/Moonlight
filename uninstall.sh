@@ -13,8 +13,8 @@ echo -e "${BLUE}       Moonlight Uninstaller             ${NC}"
 echo -e "${BLUE}=========================================${NC}"
 
 echo -e "${GREEN}[1/4] Removing Desktop Shortcut...${NC}"
-if [ -f "$HOME/.local/share/applications/moonlight.desktop" ]; then
-    rm "$HOME/.local/share/applications/moonlight.desktop"
+if [ -f "$HOME/.local/share/applications/Moonlight.desktop" ]; then
+    rm "$HOME/.local/share/applications/Moonlight.desktop"
     echo "Removed shortcut."
 elif [ -f "$HOME/.local/share/applications/Moonlight.desktop" ]; then
     rm "$HOME/.local/share/applications/Moonlight.desktop"
@@ -32,7 +32,7 @@ else
 fi
 
 echo -e "${GREEN}[3/4] Removing System Permissions...${NC}"
-RULE_FILE="/etc/udev/rules.d/99-moonlight.rules"
+RULE_FILE="/etc/udev/rules.d/99-Moonlight.rules"
 
 if [ -f "$RULE_FILE" ]; then
     echo -e "${YELLOW}Admin access required to remove system rules.${NC}"
