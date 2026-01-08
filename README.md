@@ -52,6 +52,26 @@ chmod +x install.sh
 
 ---
 
+## 🗑️ Uninstallation
+
+If you want to remove Moonlight, the included script will remove the desktop shortcut, config files, and system permissions for you.
+
+```bash
+# Enter the directory (if not already there)
+cd Moonlight
+
+# Make the uninstaller executable
+chmod +x uninstall.sh
+
+# Run the uninstaller
+./uninstall.sh
+
+# Finally, leave the deleted directory
+cd ..
+```
+
+---
+
 ## 📖 Usage
 
 Once installed, simply search for **Moonlight** in your application menu.
