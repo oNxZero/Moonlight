@@ -84,7 +84,7 @@ mkdir -p ~/.local/share/applications
 cat <<EOF > ~/.local/share/applications/moonlight.desktop
 [Desktop Entry]
 Name=Moonlight
-Comment=Universal Input Clicker
+Comment=Auto Clicker
 Exec=$TARGET_DIR/start.sh
 Icon=$TARGET_DIR/icon.svg
 Terminal=false
