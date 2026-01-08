@@ -45,7 +45,7 @@ cd Moonlight
 chmod +x install.sh
 
 # Run the universal installer and wait for it to finish
-./install.sh
+sudo ./install.sh
 ```
 
 **Note:** You must **REBOOT** after installing. The script creates a new hardware permission rule so you don't have to run the app as root.
@@ -64,7 +64,7 @@ cd Moonlight
 chmod +x uninstall.sh
 
 # Run the uninstaller
-./uninstall.sh
+sudo ./uninstall.sh
 
 # Finally, leave the deleted directory
 cd ..
