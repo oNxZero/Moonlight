@@ -1,0 +1,272 @@
+@define-color base #24273a;
+@define-color mantle #1e2030;
+@define-color crust #181926;
+@define-color text #cad3f5;
+@define-color subtext #a5adcb;
+@define-color surface0 #363a4f;
+@define-color surface1 #494d64;
+
+@define-color blue #49649a;
+
+@define-color red #ed8796;
+@define-color green #a6da95;
+
+@define-color card_bg #24273a;
+
+* {
+    font-family: "Inter", "Segoe UI", sans-serif;
+    outline: none;
+}
+window {
+    background-color: @base;
+    color: @text;
+    box-shadow: none;
+}
+window.background {
+    border: 1px solid #787E96;
+    border-radius: 6px;
+    background-clip: padding-box;
+    box-shadow: none;
+}
+headerbar {
+    background-color: @mantle;
+    border-bottom: 1px solid alpha(#787E96, 0.5);
+    min-height: 38px;
+    box-shadow: none;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    padding: 0 6px;
+}
+headerbar windowtitle, .title-label {
+    font-weight: 900;
+    color: @text;
+    letter-spacing: 0.5px;
+    font-size: 20px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    margin-left: 6px;
+}
+button.win-ctrl {
+    min-width: 20px;
+    min-height: 20px;
+    margin: 4px;
+    border-radius: 4px;
+    border: 1px solid alpha(@text, 0.2);
+    background-color: @surface0;
+    color: @text;
+    transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275), background-color 0.1s;
+    padding: 0;
+}
+button.win-ctrl:hover {
+    transform: scale(1.15);
+    background-color: @surface1;
+    border-color: @text;
+    color: @text;
+}
+button.win-ctrl.close:hover {
+    background-color: @red;
+    border-color: @red;
+    color: @crust;
+}
+popover > contents {
+    background-color: @base;
+    color: @text;
+    border: 1px solid #787E96;
+    border-radius: 8px;
+    padding: 6px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+}
+popover > arrow { background-color: transparent; border: none; box-shadow: none; }
+popover listview { background-color: transparent; margin: 0; }
+
+popover listview row {
+    padding: 8px 12px;
+    margin-bottom: 2px;
+    border-radius: 8px;
+    transition: all 0.1s ease-in-out;
+    font-weight: 600;
+    border: 1px solid transparent;
+}
+popover listview row:hover { background-color: @surface0; }
+
+popover listview row:selected {
+    background-color: alpha(@text, 0.15);
+    color: @text;
+    border: 1px solid alpha(@text, 0.5);
+    box-shadow: none;
+}
+popover label { padding-left: 4px; }
+
+button.trigger-btn {
+    min-height: 34px;
+    padding: 0 16px;
+    background-color: @surface0;
+    color: @text;
+    border: 1px solid alpha(@text, 0.2);
+    border-radius: 8px;
+    font-weight: bold;
+    transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275), background 0.1s;
+}
+button.trigger-btn:hover {
+    transform: scale(1.05);
+    background-color: @surface1;
+    border-color: @text;
+    color: @text;
+}
+button.trigger-btn:active { transform: scale(0.95); }
+
+.segmented-box {
+    background-color: @surface0;
+    min-height: 34px;
+    border-radius: 8px;
+    padding: 0px;
+    border: 1px solid alpha(@text, 0.2);
+    box-shadow: none;
+    background-clip: padding-box;
+    background-image: linear-gradient(@mantle, @mantle);
+    background-size: 50% 100%;
+    background-repeat: no-repeat;
+    transition: background-position 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
+    transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+    background-color 0.1s,
+    border-color 0.2s;
+}
+.segmented-box:hover {
+    transform: scale(1.05);
+    border-color: @text;
+}
+.pos-left { background-position: 0% 0%; }
+.pos-right { background-position: 100% 0%; }
+
+button.segment-btn {
+    background-color: transparent;
+    background-image: none;
+    color: @subtext;
+    font-weight: 800;
+    border-radius: 0;
+    padding: 0 12px;
+    margin: 0;
+    min-height: 34px;
+    border: none;
+    box-shadow: none;
+    transition: color 0.15s ease;
+}
+button.segment-btn:hover { color: @text; }
+button.segment-btn:checked {
+    color: white;
+    background-color: transparent;
+    box-shadow: none;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
+.master-box {
+    min-width: 140px;
+    background-color: @surface0;
+    background-image: linear-gradient(@mantle, @mantle);
+    border: 1px solid alpha(@text, 0.3);
+    box-shadow: none;
+    background-clip: padding-box;
+    transition: background-position 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
+    transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+    border-color 0.2s;
+}
+.master-box.pos-right {
+    background-image: linear-gradient(@mantle, @mantle);
+}
+.master-box:hover {
+    border-color: alpha(@text, 0.5);
+    transform: none;
+}
+.master-box button {
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    padding: 8px 0;
+}
+.master-box button:checked {
+    color: white;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
+.master-box button { color: @subtext; }
+
+separator.white-sep {
+    color: alpha(@text, 0.15);
+    background-color: alpha(@text, 0.15);
+    opacity: 1;
+    min-height: 1px;
+    margin: 4px 0;
+}
+dropdown > button {
+    transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    background-color: @surface0;
+    color: @text;
+    border-radius: 8px;
+    border: 1px solid alpha(@text, 0.1);
+    box-shadow: none;
+}
+dropdown > button:hover {
+    transform: scale(1.05);
+    background-color: @surface1;
+    border-color: @text;
+}
+switch {
+    background-color: @surface1;
+    border-radius: 14px;
+    border: 1px solid alpha(@text, 0.3);
+    transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275), background-color 0.2s;
+}
+switch:hover { transform: scale(1.1); }
+switch:checked {
+    background-color: @blue;
+    color: @text;
+}
+switch slider {
+    background-color: @text;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    border: none;
+}
+.card {
+    background-color: @card_bg;
+    border-radius: 12px;
+    border: 1.5px solid alpha(@text, 0.1);
+    padding: 18px;
+    margin: 10px 18px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.hero-card {
+    background: linear-gradient(135deg, @card_bg 0%, @surface0 100%);
+    border-radius: 12px;
+    border: 1.5px solid alpha(@text, 0.15);
+    padding: 18px;
+    margin: 10px 18px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+label { color: @text; }
+label.h1 { font-size: 22px; font-weight: 800; color: @text; }
+label.h2 { font-size: 12px; font-weight: 800; color: @subtext; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.9;}
+label.dim { color: @subtext; font-size: 13px; }
+label.accent { color: @text; font-weight: bold; font-family: monospace; font-size: 14px;}
+
+.status-active { color: @green; text-shadow: 0 0 15px alpha(@green, 0.4); }
+.icon-pulse.active { -gtk-icon-transform: scale(1.15); color: @green; }
+.icon-pulse { color: @surface1; transition: all 0.3s ease; }
+
+scale trough {
+    background-color: @surface1;
+    border-radius: 4px;
+    min-height: 6px;
+}
+scale highlight {
+    background-color: @text;
+    border-radius: 4px;
+    min-height: 6px;
+}
+scale slider {
+    background-color: @text;
+    min-width: 20px;
+    min-height: 20px;
+    margin: -7px;
+    border-radius: 50%;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+    border: none;
+    transition: transform 0.1s;
+}
+scale slider:hover { transform: scale(1.1); }
