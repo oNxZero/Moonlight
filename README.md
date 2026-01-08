@@ -48,7 +48,7 @@ chmod +x install.sh
 ./install.sh
 ```
 
-**Note:** You must **REBOOT** after installing. The script creates a new hardware permission rule so you don't have to run the app as root.
+**Note:** You must **Log Out** after installing. The script creates a new hardware permission rule so you don't have to run the app as root.
 
 ---
 
