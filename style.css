@@ -16,6 +16,7 @@
 @define-color logo #8caaee;
 @define-color title #cad3f5;
 @define-color shadow #000000;
+@define-color switch_bg #8caaee;
 
 @define-color card_bg #24273a;
 
@@ -183,7 +184,7 @@ switch {
 }
 switch:hover { transform: scale(1.1); border-color: @text; }
 switch:checked {
-    background-color: @blue;
+    background-color: @switch_bg;
     color: @text;
 }
 switch slider {
