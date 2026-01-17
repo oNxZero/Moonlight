@@ -32,7 +32,7 @@ DEFAULT_CONFIG = {
     'assist_wtap': False,
     'assist_wtap_chance': 5.0,
     'assist_blockhit': False,
-    'assist_blockhit_chance': 10.0
+    'assist_blockhit_chance': 5.0
 }
 
 def mask_process():
