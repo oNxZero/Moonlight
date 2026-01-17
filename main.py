@@ -10,9 +10,10 @@ gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
 from gi.repository import Gtk, Adw, Gdk, GLib
 
-from ui_builder import MainWindow
+from ui_builder import MainWindow, MOON_SVG_TEMPLATE
 from ghost_core import GhostEngine
 from input_listener import GlobalListener
+from managers import PresetManager
 
 CONFIG_DIR = os.path.expanduser("~/.config/Moonlight")
 CONFIG_FILE = os.path.join(CONFIG_DIR, "config.json")
@@ -42,6 +43,21 @@ def mask_process():
     except Exception:
         pass
 
+def install_app_icon():
+    try:
+        icon_dir = os.path.expanduser("~/.local/share/icons/hicolor/scalable/apps")
+        os.makedirs(icon_dir, exist_ok=True)
+
+        icon_path = os.path.join(icon_dir, "com.moonlight.final.svg")
+
+        if not os.path.exists(icon_path):
+            with open(icon_path, "w") as f:
+                f.write(MOON_SVG_TEMPLATE.format("#8caaee"))
+
+            os.system("gtk4-update-icon-cache -f -t " + os.path.expanduser("~/.local/share/icons/hicolor/"))
+    except Exception as e:
+        print(f"Icon installation warning: {e}")
+
 def backend_proc(state_q, config_q):
     mask_process()
     signal.signal(signal.SIGINT, signal.SIG_IGN)
@@ -51,6 +67,9 @@ def backend_proc(state_q, config_q):
 class MoonlightApp(Adw.Application):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
+        install_app_icon()
+
         self.connect('activate', self.on_activate)
         self.connect('shutdown', self.on_shutdown)
 
@@ -65,6 +84,14 @@ class MoonlightApp(Adw.Application):
         self.active_right = False
 
         self.config = self.load_config()
+        self.preset_mgr = PresetManager(CONFIG_DIR, DEFAULT_CONFIG)
+
+        self.theme_provider = Gtk.CssProvider()
+        Gtk.StyleContext.add_provider_for_display(
+            Gdk.Display.get_default(),
+            self.theme_provider,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION + 10
+        )
 
         mask_process()
 
@@ -102,6 +129,8 @@ class MoonlightApp(Adw.Application):
                 Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
             )
 
+        self.refresh_dynamic_theme()
+
         self.listener = GlobalListener(
             toggle_cb=self.trigger_toggle,
             start_cb=self.trigger_start,
@@ -126,9 +155,42 @@ class MoonlightApp(Adw.Application):
             self.handle_config_change,
             self.send_suspend,
             self.listener,
-            self.config
+            self.config,
+            self.preset_mgr,
+            self.handle_theme_change,
+            self.handle_preset_action
         )
         self.win.present()
+
+    def handle_theme_change(self, key, is_custom=False, color_val=None):
+        if is_custom:
+            self.preset_mgr.update_custom_color(key, color_val)
+        else:
+            self.preset_mgr.set_base_theme(key)
+        self.refresh_dynamic_theme()
+
+    def refresh_dynamic_theme(self):
+        data = self.preset_mgr.get_active_theme()
+        css_str = ""
+        for key, val in data.items():
+            css_str += f"@define-color {key} {val};\n"
+        self.theme_provider.load_from_string(css_str)
+
+    def handle_preset_action(self, action, name):
+        if action == "save":
+            return self.preset_mgr.save_preset(name, self.config)
+        elif action == "delete":
+            self.preset_mgr.delete_preset(name)
+        elif action == "load":
+            cfg = self.preset_mgr.load_preset(name)
+            if cfg:
+                clean_cfg = {k:v for k,v in cfg.items() if k != '_theme_config'}
+                self.config.update(clean_cfg)
+                self.save_config()
+                self.config_q.put(clean_cfg)
+                self.refresh_dynamic_theme()
+                return cfg
+        return None
 
     def ui_toggle_request(self, active, channel):
         if channel == 'left':
