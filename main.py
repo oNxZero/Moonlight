@@ -10,7 +10,7 @@ gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
 from gi.repository import Gtk, Adw, Gdk, GLib
 
-from ui_builder import MainWindow, MOON_SVG_TEMPLATE
+from ui_builder import MainWindow
 from ghost_core import GhostEngine
 from input_listener import GlobalListener
 from managers import PresetManager
@@ -48,13 +48,19 @@ def install_app_icon():
         icon_dir = os.path.expanduser("~/.local/share/icons/hicolor/scalable/apps")
         os.makedirs(icon_dir, exist_ok=True)
 
-        icon_path = os.path.join(icon_dir, "com.moonlight.final.svg")
+        dest_path = os.path.join(icon_dir, "com.moonlight.final.svg")
+        source_path = os.path.join(os.path.dirname(__file__), "icon.svg")
 
-        if not os.path.exists(icon_path):
-            with open(icon_path, "w") as f:
-                f.write(MOON_SVG_TEMPLATE.format("#8caaee"))
+        if os.path.exists(source_path):
+            with open(source_path, "r") as src:
+                icon_content = src.read()
+            with open(dest_path, "w") as dest:
+                dest.write(icon_content)
 
             os.system("gtk4-update-icon-cache -f -t " + os.path.expanduser("~/.local/share/icons/hicolor/"))
+        else:
+            print("Warning: icon.svg not found. Taskbar icon may be missing.")
+
     except Exception as e:
         print(f"Icon installation warning: {e}")
 
