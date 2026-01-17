@@ -9,7 +9,8 @@ THEMES = {
         "surface0": "#363a4f", "surface1": "#494d64",
         "blue": "#cad3f5", "red": "#ed8796", "green": "#a6da95",
         "slider": "#cad3f5", "handle": "#cad3f5", "outline": "#494d64",
-        "logo": "#cad3f5", "title": "#cad3f5", "shadow": "#000000"
+        "logo": "#cad3f5", "title": "#cad3f5", "shadow": "#000000",
+        "switch_bg": "#cad3f5"
     },
     "Obsidian": {
         "base": "#000000", "mantle": "#0a0a0a", "crust": "#000000",
@@ -17,7 +18,8 @@ THEMES = {
         "surface0": "#18181b", "surface1": "#27272a",
         "blue": "#ffffff", "red": "#ef4444", "green": "#22c55e",
         "slider": "#3f3f46", "handle": "#ffffff", "outline": "#27272a",
-        "logo": "#ffffff", "title": "#ffffff", "shadow": "#000000"
+        "logo": "#ffffff", "title": "#ffffff", "shadow": "#000000",
+        "switch_bg": "#ffffff"
     },
     "Crimson": {
         "base": "#0f0505", "mantle": "#1f0a0a", "crust": "#000000",
@@ -25,7 +27,8 @@ THEMES = {
         "surface0": "#381212", "surface1": "#4f1919",
         "blue": "#ff3333", "red": "#ff3333", "green": "#10b981",
         "slider": "#dc2626", "handle": "#ffffff", "outline": "#4f1919",
-        "logo": "#ff3333", "title": "#ffcccc", "shadow": "#1a0000"
+        "logo": "#ff3333", "title": "#ffcccc", "shadow": "#1a0000",
+        "switch_bg": "#ff3333"
     },
     "Dracula": {
         "base": "#282a36", "mantle": "#21222c", "crust": "#191a21",
@@ -33,7 +36,8 @@ THEMES = {
         "surface0": "#44475a", "surface1": "#6272a4",
         "blue": "#bd93f9", "red": "#ff5555", "green": "#50fa7b",
         "slider": "#bd93f9", "handle": "#f8f8f2", "outline": "#44475a",
-        "logo": "#bd93f9", "title": "#f8f8f2", "shadow": "#000000"
+        "logo": "#bd93f9", "title": "#f8f8f2", "shadow": "#000000",
+        "switch_bg": "#bd93f9"
     },
     "Viper": {
         "base": "#051109", "mantle": "#081c10", "crust": "#000000",
@@ -41,7 +45,8 @@ THEMES = {
         "surface0": "#0f2e1b", "surface1": "#14532d",
         "blue": "#22c55e", "red": "#ef4444", "green": "#22c55e",
         "slider": "#15803d", "handle": "#86efac", "outline": "#14532d",
-        "logo": "#4ade80", "title": "#86efac", "shadow": "#001a05"
+        "logo": "#4ade80", "title": "#86efac", "shadow": "#001a05",
+        "switch_bg": "#22c55e"
     },
     "Nord": {
         "base": "#2e3440", "mantle": "#242933", "crust": "#1c2128",
@@ -49,7 +54,8 @@ THEMES = {
         "surface0": "#3b4252", "surface1": "#434c5e",
         "blue": "#88c0d0", "red": "#bf616a", "green": "#a3be8c",
         "slider": "#5e81ac", "handle": "#eceff4", "outline": "#434c5e",
-        "logo": "#88c0d0", "title": "#eceff4", "shadow": "#000000"
+        "logo": "#88c0d0", "title": "#eceff4", "shadow": "#000000",
+        "switch_bg": "#88c0d0"
     },
     "Sakura": {
         "base": "#232136", "mantle": "#191724", "crust": "#1f1d2e",
@@ -57,7 +63,8 @@ THEMES = {
         "surface0": "#2a273f", "surface1": "#393552",
         "blue": "#eb6f92", "red": "#eb6f92", "green": "#9ccfd8",
         "slider": "#907aa9", "handle": "#e0def4", "outline": "#443c53",
-        "logo": "#ea9a97", "title": "#e0def4", "shadow": "#1a0b10"
+        "logo": "#ea9a97", "title": "#e0def4", "shadow": "#1a0b10",
+        "switch_bg": "#eb6f92"
     },
     "Solaris": {
         "base": "#0c0a00", "mantle": "#141100", "crust": "#000000",
@@ -65,7 +72,8 @@ THEMES = {
         "surface0": "#262203", "surface1": "#3f3908",
         "blue": "#facc15", "red": "#f43f5e", "green": "#10b981",
         "slider": "#ca8a04", "handle": "#fef08a", "outline": "#422006",
-        "logo": "#facc15", "title": "#fef08a", "shadow": "#1a1600"
+        "logo": "#facc15", "title": "#fef08a", "shadow": "#1a1600",
+        "switch_bg": "#facc15"
     },
     "Catppuccin": {
         "base": "#1e1e2e", "mantle": "#181825", "crust": "#11111b",
@@ -73,7 +81,8 @@ THEMES = {
         "surface0": "#313244", "surface1": "#45475a",
         "blue": "#89b4fa", "red": "#f38ba8", "green": "#a6e3a1",
         "slider": "#b4befe", "handle": "#cdd6f4", "outline": "#45475a",
-        "logo": "#f5c2e7", "title": "#cdd6f4", "shadow": "#000000"
+        "logo": "#f5c2e7", "title": "#cdd6f4", "shadow": "#000000",
+        "switch_bg": "#89b4fa"
     }
 }
 
