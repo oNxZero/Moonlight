@@ -6,27 +6,33 @@ gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
 from gi.repository import Gtk, Adw, GLib, Gdk
 
-MOON_SVG = """<?xml version="1.0" encoding="UTF-8"?>
+MOON_SVG_TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
 <svg width="64px" height="64px" viewBox="0 0 24 24" version="1.1" xmlns="http://www.w3.org/2000/svg">
-    <path d="M12.0000002,2.0000002 C12.2855146,2.0000002 12.5649479,2.02237834 12.8373396,2.06546059 C8.97157672,2.67699175 6.00000016,6.02897621 6.00000016,10 C6.00000016,14.4182782 9.58172216,18.0000002 14.0000002,18.0000002 C17.9710241,18.0000002 21.3230086,15.0284236 21.9345398,11.1626607 C21.9776221,11.4350524 22.0000002,11.7144857 22.0000002,12.0000002 C22.0000002,17.5228477 17.5228477,22.0000002 12.0000002,22.0000002 C6.47715266,22.0000002 2.00000016,17.5228477 2.00000016,12.0000002 C2.00000016,6.47715266 6.47715266,2.0000002 12.0000002,2.0000002 Z" fill="#cad3f5" stroke="none"></path>
+    <path d="M12.0000002,2.0000002 C12.2855146,2.0000002 12.5649479,2.02237834 12.8373396,2.06546059 C8.97157672,2.67699175 6.00000016,6.02897621 6.00000016,10 C6.00000016,14.4182782 9.58172216,18.0000002 14.0000002,18.0000002 C17.9710241,18.0000002 21.3230086,15.0284236 21.9345398,11.1626607 C21.9776221,11.4350524 22.0000002,11.7144857 22.0000002,12.0000002 C22.0000002,17.5228477 17.5228477,22.0000002 12.0000002,22.0000002 C6.47715266,22.0000002 2.00000016,17.5228477 2.00000016,12.0000002 C2.00000016,6.47715266 6.47715266,2.0000002 12.0000002,2.0000002 Z" fill="{0}" stroke="none"></path>
 </svg>
 """
 
 class MainWindow(Adw.ApplicationWindow):
-    def __init__(self, app, backend_toggle, backend_config, backend_suspend, listener, initial_config):
+    def __init__(self, app, backend_toggle, backend_config, backend_suspend, listener, initial_config, preset_manager, theme_cb, preset_cb):
         super().__init__(application=app, title="Moonlight")
 
-        self.set_default_size(740, 600)
+        self.set_default_size(780, 720)
         self.set_resizable(False)
 
         self.backend_toggle = backend_toggle
-        self.backend_config = backend_config
+        self._backend_config_func = backend_config
         self.backend_suspend = backend_suspend
         self.listener = listener
         self.cfg = initial_config
+        self.preset_mgr = preset_manager
+        self.theme_cb = theme_cb
+        self.preset_cb = preset_cb
 
+        self.active_preset_name = "Default"
+        self.color_buttons = {}
+
+        self.sliders_map = {}
         self.last_focus_time = 0
-        self.master_active = False
         self.is_binding = False
         self.last_bind_time = 0
 
@@ -45,12 +51,28 @@ class MainWindow(Adw.ApplicationWindow):
         root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.set_content(root)
 
-        header = Adw.HeaderBar()
-        header.set_show_end_title_buttons(False)
-        header.set_show_start_title_buttons(False)
-        lbl_title = Gtk.Label(label="Moonlight")
-        lbl_title.set_css_classes(["title-label"])
-        header.set_title_widget(lbl_title)
+        self.header = Adw.HeaderBar()
+        self.header.set_show_end_title_buttons(False)
+        self.header.set_show_start_title_buttons(False)
+
+        self.box_header_left = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+
+        self.btn_menu = Gtk.Button(icon_name="emblem-system-symbolic")
+        self.btn_menu.set_css_classes(["win-ctrl"])
+        self.btn_menu.connect("clicked", lambda x: self.navigate_to("settings"))
+
+        self.btn_back = Gtk.Button(icon_name="go-previous-symbolic")
+        self.btn_back.set_css_classes(["win-ctrl"])
+        self.btn_back.set_visible(False)
+        self.btn_back.connect("clicked", lambda x: self.navigate_to("home"))
+
+        self.box_header_left.append(self.btn_back)
+        self.box_header_left.append(self.btn_menu)
+        self.header.pack_start(self.box_header_left)
+
+        self.lbl_title = Gtk.Label(label="Moonlight")
+        self.lbl_title.set_css_classes(["title-label"])
+        self.header.set_title_widget(self.lbl_title)
 
         box_win_ctrl = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
         btn_min = Gtk.Button(icon_name="window-minimize-symbolic")
@@ -65,16 +87,80 @@ class MainWindow(Adw.ApplicationWindow):
 
         box_win_ctrl.append(btn_min)
         box_win_ctrl.append(btn_close)
-        header.pack_end(box_win_ctrl)
-        root.append(header)
+        self.header.pack_end(box_win_ctrl)
+        root.append(self.header)
+
+        self.stack = Gtk.Stack()
+        self.stack.set_transition_type(Gtk.StackTransitionType.SLIDE_LEFT_RIGHT)
+        self.stack.set_transition_duration(300)
+
+        self.page_home = self.build_home_page()
+        self.stack.add_named(self.page_home, "home")
+
+        self.page_settings = self.build_settings_page()
+        self.stack.add_named(self.page_settings, "settings")
+
+        root.append(self.stack)
+
+        self.update_logo_visuals()
+        self.refresh_ui_mode()
+
+    def refresh_ui_mode(self):
+        is_mouse = self.btn_mode_mouse.get_active()
+        self.card_assist.set_visible(is_mouse)
+
+        if is_mouse:
+            self.row_bind_right.set_visible(True)
+            self.box_cps_right.set_visible(True)
+            self.sep_cps_right.set_visible(True)
+            self.box_jitter.set_visible(True)
+            self.sep_jitter.set_visible(True)
+            self.row_target.set_visible(False)
+            self.lbl_bind_left.set_label("Left Click Trigger")
+            self.lbl_cps_left.set_label("Left Click CPS")
+        else:
+            self.row_target.set_visible(True)
+            self.row_bind_right.set_visible(False)
+            self.box_cps_right.set_visible(False)
+            self.sep_cps_right.set_visible(False)
+            self.box_jitter.set_visible(False)
+            self.sep_jitter.set_visible(False)
+            self.lbl_bind_left.set_label("Trigger Key")
+            self.lbl_cps_left.set_label("Key Tap CPS")
+            self.btn_target.set_label(self.saved_target_name)
+
+    def update_config(self, new_data):
+        self.cfg.update(new_data)
+        self._backend_config_func(new_data)
+        if self.stack.get_visible_child_name() == "settings":
+            self.refresh_presets()
+
+    def navigate_to(self, page):
+        if page == "settings":
+            self.refresh_presets()
+            self.refresh_color_pickers()
+
+        self.stack.set_visible_child_name(page)
+
+        if page == "home":
+            self.btn_back.set_visible(False)
+            self.btn_menu.set_visible(True)
+            self.lbl_title.set_label("Moonlight")
+        else:
+            self.btn_menu.set_visible(False)
+            self.btn_back.set_visible(True)
+            self.lbl_title.set_label("Settings")
+
+    def build_home_page(self):
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
 
         hero = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=24)
         hero.set_css_classes(["card", "hero-card"])
 
         self.tmp_icon = tempfile.NamedTemporaryFile(suffix=".svg", delete=False)
-        self.tmp_icon.write(MOON_SVG.encode('utf-8'))
         self.tmp_icon.close()
-        self.icon_status = Gtk.Image.new_from_file(self.tmp_icon.name)
+
+        self.icon_status = Gtk.Image()
         self.icon_status.set_pixel_size(64)
         self.icon_status.set_css_classes(["icon-pulse"])
         hero.append(self.icon_status)
@@ -111,7 +197,7 @@ class MainWindow(Adw.ApplicationWindow):
         self.sw_shield.connect("pressed", self.on_switch_click_attempt)
         self.box_master.add_controller(self.sw_shield)
         hero.append(self.box_master)
-        root.append(hero)
+        box.append(hero)
 
         hbox_middle = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
         hbox_middle.set_homogeneous(True)
@@ -177,30 +263,10 @@ class MainWindow(Adw.ApplicationWindow):
         card_act.append(row_trig)
         card_act.append(self.create_sep())
 
-        self.row_bind_left = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-        self.lbl_bind_left = Gtk.Label(label="Left Click Trigger", xalign=0, hexpand=True)
-
-        t_left_name = listener.get_nice_name(self.cfg.get('trigger_left', 64))
-        self.btn_bind_left = Gtk.Button(label=t_left_name)
-
-        self.btn_bind_left.set_css_classes(["trigger-btn"])
-        self.btn_bind_left.set_focusable(False)
-        self.btn_bind_left.connect("clicked", lambda x: self.on_bind_click("trigger_left"))
-        self.row_bind_left.append(self.lbl_bind_left)
-        self.row_bind_left.append(self.btn_bind_left)
+        self.row_bind_left = self.create_bind_row("Left Click Trigger", "trigger_left", self.cfg.get('trigger_left', 64))
         card_act.append(self.row_bind_left)
 
-        self.row_bind_right = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-        lbl_bind_right = Gtk.Label(label="Right Click Trigger", xalign=0, hexpand=True)
-
-        t_right_name = listener.get_nice_name(self.cfg.get('trigger_right', 65))
-        self.btn_bind_right = Gtk.Button(label=t_right_name)
-
-        self.btn_bind_right.set_css_classes(["trigger-btn"])
-        self.btn_bind_right.set_focusable(False)
-        self.btn_bind_right.connect("clicked", lambda x: self.on_bind_click("trigger_right"))
-        self.row_bind_right.append(lbl_bind_right)
-        self.row_bind_right.append(self.btn_bind_right)
+        self.row_bind_right = self.create_bind_row("Right Click Trigger", "trigger_right", self.cfg.get('trigger_right', 65))
         card_act.append(self.row_bind_right)
 
         hbox_middle.append(card_act)
@@ -208,32 +274,30 @@ class MainWindow(Adw.ApplicationWindow):
         self.card_assist = self.create_card("ASSIST")
         row_wtap = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
         lbl_wtap = Gtk.Label(label="W-Tap", xalign=0, hexpand=True)
-        sw_wtap = Gtk.Switch()
-        sw_wtap.set_active(self.cfg.get('assist_wtap', False))
-        sw_wtap.set_valign(Gtk.Align.CENTER)
-        sw_wtap.connect("notify::active", lambda w, p: self.backend_config({'assist_wtap': w.get_active()}))
+        self.sw_wtap = Gtk.Switch()
+        self.sw_wtap.set_active(self.cfg.get('assist_wtap', False))
+        self.sw_wtap.set_valign(Gtk.Align.CENTER)
+        self.sw_wtap.connect("notify::active", lambda w, p: self.update_config({'assist_wtap': w.get_active()}))
         row_wtap.append(lbl_wtap)
-        row_wtap.append(sw_wtap)
+        row_wtap.append(self.sw_wtap)
         self.card_assist.append(row_wtap)
 
-        self.add_slider(self.card_assist, "W-Tap Chance %", 0, 100, self.cfg.get('assist_wtap_chance', 5.0), 1, lambda v: self.backend_config({'assist_wtap_chance': v}))
-
+        self.add_slider(self.card_assist, "W-Tap Chance %", 0, 100, self.cfg.get('assist_wtap_chance', 5.0), 1, lambda v: self.update_config({'assist_wtap_chance': v}), 'assist_wtap_chance')
         self.card_assist.append(self.create_sep())
 
         row_bh = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
         lbl_bh = Gtk.Label(label="Blockhit", xalign=0, hexpand=True)
-        sw_bh = Gtk.Switch()
-        sw_bh.set_active(self.cfg.get('assist_blockhit', False))
-        sw_bh.set_valign(Gtk.Align.CENTER)
-        sw_bh.connect("notify::active", lambda w, p: self.backend_config({'assist_blockhit': w.get_active()}))
+        self.sw_bh = Gtk.Switch()
+        self.sw_bh.set_active(self.cfg.get('assist_blockhit', False))
+        self.sw_bh.set_valign(Gtk.Align.CENTER)
+        self.sw_bh.connect("notify::active", lambda w, p: self.update_config({'assist_blockhit': w.get_active()}))
         row_bh.append(lbl_bh)
-        row_bh.append(sw_bh)
+        row_bh.append(self.sw_bh)
         self.card_assist.append(row_bh)
 
-        self.add_slider(self.card_assist, "Blockhit Chance %", 0, 100, self.cfg.get('assist_blockhit_chance', 10.0), 1, lambda v: self.backend_config({'assist_blockhit_chance': v}))
-
+        self.add_slider(self.card_assist, "Blockhit Chance %", 0, 100, self.cfg.get('assist_blockhit_chance', 10.0), 1, lambda v: self.update_config({'assist_blockhit_chance': v}), 'assist_blockhit_chance')
         hbox_middle.append(self.card_assist)
-        root.append(hbox_middle)
+        box.append(hbox_middle)
 
         self.card_conf = self.create_card("CONFIGURATION")
         self.row_target = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
@@ -246,13 +310,15 @@ class MainWindow(Adw.ApplicationWindow):
         self.row_target.append(self.btn_target)
         self.card_conf.append(self.row_target)
 
-        self.box_cps_left, self.lbl_cps_left = self.add_slider(self.card_conf, "Left Click CPS", 1.0, 20.0, self.cfg.get('cps_left', 12.0), 0.5, lambda v: self.backend_config({'cps_left': v}))
+        self.box_cps_left, self.lbl_cps_left = self.add_slider(self.card_conf, "Left Click CPS", 1.0, 20.0, self.cfg.get('cps_left', 12.0), 0.5, lambda v: self.update_config({'cps_left': v}), 'cps_left')
         self.sep_cps_right = self.create_sep()
         self.card_conf.append(self.sep_cps_right)
-        self.box_cps_right, _ = self.add_slider(self.card_conf, "Right Click CPS", 1.0, 20.0, self.cfg.get('cps_right', 12.0), 0.5, lambda v: self.backend_config({'cps_right': v}))
+
+        self.box_cps_right, self.lbl_cps_right = self.add_slider(self.card_conf, "Right Click CPS", 1.0, 20.0, self.cfg.get('cps_right', 12.0), 0.5, lambda v: self.update_config({'cps_right': v}), 'cps_right')
+
         self.sep_jitter = self.create_sep()
         self.card_conf.append(self.sep_jitter)
-        self.box_jitter, _ = self.add_slider(self.card_conf, "Left Click Jitter", 0.0, 10.0, self.cfg.get('jitter', 2.0), 0.5, lambda v: self.backend_config({'jitter': v}))
+        self.box_jitter, _ = self.add_slider(self.card_conf, "Jitter Strength", 0.0, 10.0, self.cfg.get('jitter', 2.0), 0.5, lambda v: self.update_config({'jitter': v}), 'jitter')
         self.card_conf.append(self.create_sep())
 
         row_rand = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
@@ -285,24 +351,283 @@ class MainWindow(Adw.ApplicationWindow):
         self.card_conf.append(row_rand)
 
         self.card_conf.append(self.create_sep())
-        row_hide = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-        lbl_hide = Gtk.Label(label="Hide GUI", xalign=0, hexpand=True)
 
-        h_key_name = listener.get_nice_name(self.cfg.get('hide_key', 54))
-        self.btn_hide = Gtk.Button(label=h_key_name)
-
-        self.btn_hide.set_css_classes(["trigger-btn"])
-        self.btn_hide.set_focusable(False)
-        self.btn_hide.connect("clicked", lambda x: self.on_bind_click("hide"))
-        row_hide.append(lbl_hide)
-        row_hide.append(self.btn_hide)
-        self.card_conf.append(row_hide)
-
+        self.row_hide = self.create_bind_row("Hide Window Key", "hide", self.cfg.get('hide_key', 54))
+        self.btn_hide = self.row_hide.get_last_child()
+        self.card_conf.append(self.row_hide)
         self.card_conf.set_margin_bottom(8)
+        box.append(self.card_conf)
+        return box
 
-        root.append(self.card_conf)
+    def build_settings_page(self):
+        scroll = Gtk.ScrolledWindow()
+        scroll.set_vexpand(True)
 
-        self.refresh_ui_mode()
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
+        box.set_margin_top(24)
+        box.set_margin_bottom(24)
+        box.set_margin_start(36)
+        box.set_margin_end(36)
+
+        lbl_cfg = Gtk.Label(label="CONFIGURATIONS", xalign=0)
+        lbl_cfg.set_css_classes(["h2"])
+        box.append(lbl_cfg)
+
+        input_card = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        input_card.set_css_classes(["create-config-box", "anim-enter"])
+
+        self.entry_preset = Gtk.Entry(placeholder_text="Create new config...")
+        self.entry_preset.set_hexpand(True)
+        btn_save = Gtk.Button(label="Create")
+        btn_save.set_css_classes(["trigger-btn", "zoom-in-anim"])
+        btn_save.connect("clicked", self.on_preset_save)
+
+        input_card.append(self.entry_preset)
+        input_card.append(btn_save)
+        box.append(input_card)
+
+        self.list_frame = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        self.list_frame.set_css_classes(["card", "nopad", "anim-enter-delay"])
+
+        self.list_presets = Gtk.ListBox()
+        self.list_presets.set_selection_mode(Gtk.SelectionMode.NONE)
+        self.list_presets.set_css_classes(["boxed-list"])
+        self.refresh_presets()
+
+        self.list_frame.append(self.list_presets)
+        box.append(self.list_frame)
+
+        box.append(self.create_sep())
+
+        lbl_th = Gtk.Label(label="THEME GALLERY", xalign=0)
+        lbl_th.set_css_classes(["h2"])
+        box.append(lbl_th)
+
+        theme_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
+        theme_card.set_css_classes(["card", "anim-enter-delay-2"])
+
+        grid = Gtk.FlowBox()
+        grid.set_valign(Gtk.Align.START)
+        grid.set_max_children_per_line(3)
+        grid.set_selection_mode(Gtk.SelectionMode.NONE)
+        grid.set_column_spacing(10)
+        grid.set_row_spacing(10)
+
+        from managers import THEMES
+        for t_name in THEMES.keys():
+            btn = Gtk.Button(label=t_name.replace("Moonlight ", ""))
+            btn.set_css_classes(["trigger-btn"])
+            btn.connect("clicked", lambda b, n=t_name: self.on_theme_preset_clicked(n))
+            grid.append(btn)
+
+        theme_card.append(grid)
+        box.append(theme_card)
+
+        lbl_c = Gtk.Label(label="VISUAL OVERRIDES", xalign=0)
+        lbl_c.set_css_classes(["h2"])
+        box.append(lbl_c)
+
+        override_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
+        override_card.set_css_classes(["card", "anim-enter-delay-2"])
+
+        cols = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=24)
+        cols.set_homogeneous(True)
+
+        col1 = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        col1.append(self.create_color_row("Base", "base"))
+        col1.append(self.create_color_row("Mantle", "mantle"))
+        col1.append(self.create_color_row("Crust", "crust"))
+        col1.append(self.create_color_row("Logo", "logo"))
+
+        col2 = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        col2.append(self.create_color_row("Surface 1", "surface0"))
+        col2.append(self.create_color_row("Surface 2", "surface1"))
+        col2.append(self.create_color_row("Text", "text"))
+        col2.append(self.create_color_row("Title", "title"))
+        col2.append(self.create_color_row("Subtext", "subtext"))
+
+        col3 = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        col3.append(self.create_color_row("Accent", "blue"))
+        col3.append(self.create_color_row("Slider", "slider"))
+        col3.append(self.create_color_row("Handle", "handle"))
+        col3.append(self.create_color_row("Outline", "outline"))
+        col3.append(self.create_color_row("Shadow", "shadow"))
+
+        cols.append(col1)
+        cols.append(col2)
+        cols.append(col3)
+        override_card.append(cols)
+
+        box.append(override_card)
+        scroll.set_child(box)
+        return scroll
+
+    def on_theme_preset_clicked(self, name):
+        self.theme_cb(name, is_custom=False)
+        self.refresh_color_pickers()
+        self.update_logo_visuals()
+        self.refresh_presets()
+
+    def create_color_row(self, title, key):
+        row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        lbl = Gtk.Label(label=title, xalign=0, hexpand=True)
+        lbl.add_css_class("dim")
+
+        btn = Gtk.ColorButton()
+        btn.set_css_classes(["zoom-in-anim", "color-override-btn"])
+        btn.connect("color-set", lambda b: self.on_color_set(b, key))
+
+        self.color_buttons[key] = btn
+
+        row.append(lbl)
+        row.append(btn)
+        return row
+
+    def refresh_color_pickers(self):
+        theme = self.preset_mgr.get_active_theme()
+        for key, btn in self.color_buttons.items():
+            if key in theme:
+                c = Gdk.RGBA()
+                c.parse(theme[key])
+                btn.set_rgba(c)
+
+    def update_logo_visuals(self):
+        theme = self.preset_mgr.get_active_theme()
+        logo_color = theme.get('logo', '#8caaee')
+
+        try:
+            with open(self.tmp_icon.name, 'w') as f:
+                f.write(MOON_SVG_TEMPLATE.format(logo_color))
+
+            self.icon_status.set_from_file(self.tmp_icon.name)
+        except Exception as e:
+            print(f"Error updating logo: {e}")
+
+    def on_color_set(self, btn, key):
+        rgba = btn.get_rgba()
+        r, g, b = int(rgba.red*255), int(rgba.green*255), int(rgba.blue*255)
+        hex_val = f"#{r:02x}{g:02x}{b:02x}"
+        self.theme_cb(key, is_custom=True, color_val=hex_val)
+        self.refresh_presets()
+        if key == 'logo':
+            self.update_logo_visuals()
+
+    def refresh_presets(self):
+        while child := self.list_presets.get_first_child():
+            self.list_presets.remove(child)
+
+        presets = self.preset_mgr.get_presets()
+        for p in presets:
+            row = Gtk.ListBoxRow()
+            row.set_css_classes(["boxed-row"])
+
+            if p == self.active_preset_name:
+                row.add_css_class("selected-row")
+
+            hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+            hbox.set_margin_top(8)
+            hbox.set_margin_bottom(8)
+            hbox.set_margin_start(12)
+            hbox.set_margin_end(12)
+
+            lbl = Gtk.Label(label=p, xalign=0, hexpand=True)
+            lbl.set_css_classes(["h2-text"])
+
+            btn_save = Gtk.Button(icon_name="document-save-symbolic")
+            btn_save.set_css_classes(["icon-btn", "zoom-in-anim"])
+
+            is_modified = self.preset_mgr.check_modification(p, self.cfg)
+            if not is_modified:
+                btn_save.set_sensitive(False)
+                btn_save.set_opacity(0.3)
+            else:
+                btn_save.connect("clicked", lambda b, n=p: self.on_preset_save_existing(n))
+
+            btn_load = Gtk.Button(icon_name="media-playback-start-symbolic")
+            btn_load.set_css_classes(["icon-btn", "zoom-in-anim"])
+
+            if p == self.active_preset_name:
+                btn_load.set_sensitive(False)
+                btn_load.set_opacity(0.3)
+            else:
+                btn_load.connect("clicked", lambda b, n=p: self.on_preset_load(n))
+
+            if p == "Default":
+                btn_reset = Gtk.Button(icon_name="view-refresh-symbolic")
+                btn_reset.set_css_classes(["icon-btn", "zoom-in-anim"])
+
+                is_def_mod = self.preset_mgr.is_default_modified(self.cfg)
+                if not is_def_mod:
+                    btn_reset.set_sensitive(False)
+                    btn_reset.set_opacity(0.3)
+                else:
+                    btn_reset.connect("clicked", self.on_preset_reset)
+
+                hbox.append(lbl)
+                hbox.append(btn_save)
+                hbox.append(btn_load)
+                hbox.append(btn_reset)
+            else:
+                btn_del = Gtk.Button(icon_name="user-trash-symbolic")
+                btn_del.set_css_classes(["icon-btn", "destructive", "zoom-in-anim"])
+                btn_del.connect("clicked", lambda b, n=p: self.on_preset_delete(n))
+                hbox.append(lbl)
+                hbox.append(btn_save)
+                hbox.append(btn_load)
+                hbox.append(btn_del)
+
+            row.set_child(hbox)
+            self.list_presets.append(row)
+
+    def on_preset_save(self, btn):
+        name = self.entry_preset.get_text()
+        status = self.preset_mgr.save_preset(name, self.cfg, check_exists=True)
+
+        if status == "success":
+            self.entry_preset.set_text("")
+            self.entry_preset.set_placeholder_text("Create new config...")
+            self.entry_preset.remove_css_class("error")
+            self.active_preset_name = name
+            self.refresh_presets()
+        elif status == "empty":
+            self.trigger_error("Name cannot be empty!")
+        elif status == "duplicate":
+            self.trigger_error("Name already exists!")
+
+    def trigger_error(self, msg):
+        self.entry_preset.set_text("")
+        self.entry_preset.set_placeholder_text(msg)
+        self.entry_preset.add_css_class("error")
+        self.entry_preset.add_css_class("shake-anim")
+
+        GLib.timeout_add(500, lambda: self.entry_preset.remove_css_class("shake-anim"))
+        GLib.timeout_add(1000, lambda: self.entry_preset.remove_css_class("error"))
+        GLib.timeout_add(1000, lambda: self.entry_preset.set_placeholder_text("Create new config..."))
+
+    def on_preset_save_existing(self, name):
+        if self.preset_mgr.save_preset(name, self.cfg, check_exists=False) == "success":
+            self.active_preset_name = name
+            self.refresh_presets()
+
+    def on_preset_load(self, name):
+        cfg = self.preset_cb("load", name)
+        if cfg:
+            self.active_preset_name = name
+            self.update_ui_from_config(cfg)
+            self.refresh_presets()
+            self.refresh_color_pickers()
+            self.update_logo_visuals()
+
+    def on_preset_reset(self, btn):
+        self.preset_mgr.reset_preset("Default")
+        self.on_preset_load("Default")
+
+    def on_preset_delete(self, name):
+        self.preset_cb("delete", name)
+        if self.active_preset_name == name:
+            self.on_preset_load("Default")
+        else:
+            self.refresh_presets()
 
     def create_card(self, title):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
@@ -315,11 +640,11 @@ class MainWindow(Adw.ApplicationWindow):
     def create_sep(self):
         sep = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
         sep.set_css_classes(["white-sep"])
-        sep.set_margin_top(0)
-        sep.set_margin_bottom(0)
+        sep.set_margin_top(4)
+        sep.set_margin_bottom(4)
         return sep
 
-    def add_slider(self, parent, title, min_v, max_v, def_v, step, callback):
+    def add_slider(self, parent, title, min_v, max_v, def_v, step, callback, cfg_key=None):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
         head = Gtk.Box()
         t = Gtk.Label(label=title, xalign=0, hexpand=True)
@@ -341,7 +666,62 @@ class MainWindow(Adw.ApplicationWindow):
         scale.connect("value-changed", _cb)
         box.append(scale)
         parent.append(box)
+        if cfg_key: self.sliders_map[cfg_key] = scale
         return box, t
+
+    def create_bind_row(self, title, mode, code):
+        row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        lbl = Gtk.Label(label=title, xalign=0, hexpand=True)
+
+        name = self.listener.get_nice_name(code)
+        btn = Gtk.Button(label=name)
+        btn.set_css_classes(["trigger-btn"])
+        btn.connect("clicked", lambda x: self.on_bind_click(mode))
+
+        if mode == "trigger_left":
+            self.lbl_bind_left = lbl
+            self.btn_bind_left = btn
+        elif mode == "trigger_right":
+            self.lbl_bind_right = lbl
+            self.btn_bind_right = btn
+
+        row.append(lbl)
+        row.append(btn)
+        return row
+
+    def update_ui_from_config(self, cfg):
+        self.cfg.update(cfg)
+        for key, scale in self.sliders_map.items():
+            if key in cfg: scale.set_value(float(cfg[key]))
+
+        if 'assist_wtap' in cfg: self.sw_wtap.set_active(cfg['assist_wtap'])
+        if 'assist_blockhit' in cfg: self.sw_bh.set_active(cfg['assist_blockhit'])
+
+        if 'trigger_left' in cfg: self.btn_bind_left.set_label(self.listener.get_nice_name(cfg['trigger_left']))
+        if 'trigger_right' in cfg: self.btn_bind_right.set_label(self.listener.get_nice_name(cfg['trigger_right']))
+        if 'hide_key' in cfg: self.btn_hide.set_label(self.listener.get_nice_name(cfg['hide_key']))
+        if 'target_btn' in cfg:
+             self.saved_target_code = cfg['target_btn']
+             self.saved_target_name = self.listener.get_nice_name(self.saved_target_code)
+             self.btn_target.set_label(self.saved_target_name)
+
+        if 'mode' in cfg:
+            is_mouse = (cfg['mode'] == 'mouse')
+            self.btn_mode_mouse.set_active(is_mouse)
+            self.btn_mode_kb.set_active(not is_mouse)
+            self.refresh_ui_mode()
+
+        if 'rand' in cfg:
+            is_legit = (cfg['rand'] == 1)
+            self.btn_legit.set_active(is_legit)
+            self.btn_blatant.set_active(not is_legit)
+
+        if 'trigger_mode' in cfg:
+            is_tog = (cfg['trigger_mode'] == 'toggle')
+            self.btn_trig_tog.set_active(is_tog)
+            self.btn_trig_hold.set_active(not is_tog)
+
+        self.update_config(cfg)
 
     def on_window_focus_change(self, win, _):
         is_focused = win.get_property("is-active")
@@ -368,10 +748,8 @@ class MainWindow(Adw.ApplicationWindow):
     def on_master_toggled(self, btn):
         is_on = not self.btn_master_off.get_active()
         self.update_master_visuals(is_on)
-        if is_on: self.backend_toggle(True, 'left')
-        else:
-            self.backend_toggle(False, 'left')
-            self.backend_toggle(False, 'right')
+        self.backend_toggle(is_on, 'left')
+        if not is_on: self.backend_toggle(False, 'right')
 
     def update_master_visuals(self, active):
         if active:
@@ -398,65 +776,44 @@ class MainWindow(Adw.ApplicationWindow):
 
     def on_app_mode_changed(self, btn):
         mode = "mouse" if self.btn_mode_mouse.get_active() else "keyboard"
-        self.backend_config({'mode': mode})
+        self.update_config({'mode': mode})
+        if mode == "keyboard":
+            self.update_config({'target_btn': self.saved_target_code})
+        else:
+            self.update_config({'target_btn': -1})
+        self.listener.set_app_mode(mode)
+
         if mode == "mouse":
             self.seg_mode.add_css_class("pos-left")
             self.seg_mode.remove_css_class("pos-right")
         else:
             self.seg_mode.add_css_class("pos-right")
             self.seg_mode.remove_css_class("pos-left")
-            if self.saved_target_code is not None:
-                self.backend_config({'target_btn': self.saved_target_code})
-            else:
-                self.backend_config({'target_btn': -1})
-        self.listener.set_app_mode(mode)
+
         self.refresh_ui_mode()
 
-    def refresh_ui_mode(self):
-        is_mouse = self.btn_mode_mouse.get_active()
-        self.card_assist.set_visible(is_mouse)
-
-        if is_mouse:
-            self.row_bind_right.set_visible(True)
-            self.box_cps_right.set_visible(True)
-            self.sep_cps_right.set_visible(True)
-            self.box_jitter.set_visible(True)
-            self.sep_jitter.set_visible(True)
-            self.row_target.set_visible(False)
-            self.lbl_bind_left.set_label("Left Click Trigger")
-            self.lbl_cps_left.set_label("Left Click CPS")
-        else:
-            self.row_target.set_visible(True)
-            self.row_bind_right.set_visible(False)
-            self.box_cps_right.set_visible(False)
-            self.sep_cps_right.set_visible(False)
-            self.box_jitter.set_visible(False)
-            self.sep_jitter.set_visible(False)
-            self.lbl_bind_left.set_label("Trigger Key")
-            self.lbl_cps_left.set_label("Key Tap CPS")
-            self.btn_target.set_label(self.saved_target_name)
-
     def on_trig_mode_changed(self, btn):
-        if self.btn_trig_tog.get_active():
+        mode = "toggle" if self.btn_trig_tog.get_active() else "hold"
+        self.listener.set_trigger_mode(mode)
+        self.update_config({'trigger_mode': mode})
+
+        if mode == "toggle":
             self.seg_trig.add_css_class("pos-left")
             self.seg_trig.remove_css_class("pos-right")
-            self.listener.set_trigger_mode("toggle")
-            self.backend_config({'trigger_mode': 'toggle'})
         else:
             self.seg_trig.add_css_class("pos-right")
             self.seg_trig.remove_css_class("pos-left")
-            self.listener.set_trigger_mode("hold")
-            self.backend_config({'trigger_mode': 'hold'})
 
     def on_human_toggled(self, btn):
-        if self.btn_legit.get_active():
+        lvl = 1 if self.btn_legit.get_active() else 2
+        self.update_config({'rand': lvl})
+
+        if lvl == 1:
             self.seg_rand.add_css_class("pos-left")
             self.seg_rand.remove_css_class("pos-right")
-            self.backend_config({'rand': 1})
         else:
             self.seg_rand.add_css_class("pos-right")
             self.seg_rand.remove_css_class("pos-left")
-            self.backend_config({'rand': 2})
 
     def on_bind_click(self, mode):
         if self.is_binding: return
@@ -481,5 +838,5 @@ class MainWindow(Adw.ApplicationWindow):
             btn = self.btn_target
             self.saved_target_code = code
             self.saved_target_name = label
-            self.backend_config({'target_btn': code})
+            self.update_config({'target_btn': code})
         if btn: btn.set_label(label)
