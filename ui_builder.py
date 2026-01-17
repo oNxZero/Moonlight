@@ -438,6 +438,7 @@ class MainWindow(Adw.ApplicationWindow):
         col1.append(self.create_color_row("Mantle", "mantle"))
         col1.append(self.create_color_row("Crust", "crust"))
         col1.append(self.create_color_row("Logo", "logo"))
+        col1.append(self.create_color_row("Switch", "switch_bg"))
 
         col2 = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         col2.append(self.create_color_row("Surface 1", "surface0"))
