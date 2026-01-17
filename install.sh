@@ -34,6 +34,7 @@ echo -e "${GREEN}Cleaning up repository artifacts...${NC}"
 rm -rf "$TARGET_DIR/.git"        2>/dev/null || true
 rm -rf "$TARGET_DIR/assets"      2>/dev/null || true
 rm -f  "$TARGET_DIR/README.md"   2>/dev/null || true
+rm -f  "$TARGET_DIR/LICENSE"     2>/dev/null || true
 
 echo -e "${GREEN}[1/5] Installing system dependencies...${NC}"
 
@@ -57,6 +58,8 @@ fi
 
 echo -e "${GREEN}[2/5] Installing Python dependencies...${NC}"
 python3 -m pip install --user -r requirements.txt
+
+rm -f "$TARGET_DIR/requirements.txt" 2>/dev/null || true
 
 echo -e "${GREEN}[3/5] Configuring input permissions...${NC}"
 sudo groupadd -f input
