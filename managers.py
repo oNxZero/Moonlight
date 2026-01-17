@@ -7,19 +7,19 @@ THEMES = {
         "base": "#24273a", "mantle": "#1e2030", "crust": "#181926",
         "text": "#cad3f5", "subtext": "#a5adcb",
         "surface0": "#363a4f", "surface1": "#494d64",
-        "blue": "#cad3f5", "red": "#ed8796", "green": "#a6da95",
+        "blue": "#8caaee", "red": "#ed8796", "green": "#a6da95",
         "slider": "#cad3f5", "handle": "#cad3f5", "outline": "#494d64",
         "logo": "#cad3f5", "title": "#cad3f5", "shadow": "#000000",
-        "switch_bg": "#cad3f5"
+        "switch_bg": "#8caaee"
     },
     "Obsidian": {
         "base": "#000000", "mantle": "#0a0a0a", "crust": "#000000",
         "text": "#ffffff", "subtext": "#a1a1aa",
         "surface0": "#18181b", "surface1": "#27272a",
-        "blue": "#ffffff", "red": "#ef4444", "green": "#22c55e",
+        "blue": "#c0c0c0", "red": "#ef4444", "green": "#22c55e",
         "slider": "#3f3f46", "handle": "#ffffff", "outline": "#27272a",
-        "logo": "#ffffff", "title": "#ffffff", "shadow": "#000000",
-        "switch_bg": "#ffffff"
+        "logo": "#c0c0c0", "title": "#ffffff", "shadow": "#000000",
+        "switch_bg": "#c0c0c0"
     },
     "Crimson": {
         "base": "#0f0505", "mantle": "#1f0a0a", "crust": "#000000",
