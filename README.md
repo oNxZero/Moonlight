@@ -100,31 +100,24 @@ You can rebind these directly in the app by clicking the button and pressing a n
 
 ---
 
-## ⚙️ Configuration
+## ⚙️ Configuration & Customization
 
-Settings are saved automatically on exit to `~/.config/Moonlight/config.json`.
+The settings menu allows you to manage profiles and themes without editing files.
 
-You can edit this file manually if you want precise control over values not shown in the UI:
+### 📁 Presets
+Presets are **snapshots** of your configuration.
+* **Create:** Type a name and click "Create" to save your current settings as a new preset.
+* **Load:** Click the **Play** button (▶) to apply a preset's settings to your current session.
+* **Update:** Click the **Save** button (💾) to overwrite an existing preset with your current settings.
+* **Note:** The app remembers your *current* active settings automatically on exit, but Presets must be updated manually.
 
-```json
-{
-    "cps_left": 12.0,
-    "cps_right": 12.0,
-    "jitter": 2.0,
-    "rand": 1,
-    "mode": "mouse",
-    "target_btn": -1,
-    "trigger_mode": "toggle",
-    "trigger_left": 64,
-    "trigger_right": 65,
-    "hide_key": 54,
-    "assist_wtap": false,
-    "assist_wtap_chance": 5,
-    "assist_blockhit": false,
-    "assist_blockhit_chance": 10.0
-}
+### 🎨 Themes
+* **Gallery:** Click any theme name (like **Dracula** or **Obsidian**) to instantly apply that color scheme.
+* **Overrides:** Use the color pickers to change specific elements like the Accent color or Background.
 
-```
+### 🔧 File Location
+All configurations and presets are stored in:
+`~/.config/Moonlight/`
 
 ---
 
