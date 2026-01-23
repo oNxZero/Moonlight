@@ -2,7 +2,7 @@ import os
 import json
 import glob
 
-THEMES = {
+DEFAULT_THEMES = {
     "Moonlight": {
         "base": "#24273a", "mantle": "#1e2030", "crust": "#181926",
         "text": "#cad3f5", "subtext": "#a5adcb",
@@ -22,13 +22,13 @@ THEMES = {
         "switch_bg": "#c0c0c0"
     },
     "Crimson": {
-        "base": "#0f0505", "mantle": "#1f0a0a", "crust": "#000000",
-        "text": "#ffe5e5", "subtext": "#ff8080",
-        "surface0": "#381212", "surface1": "#4f1919",
-        "blue": "#ff3333", "red": "#ff3333", "green": "#10b981",
-        "slider": "#dc2626", "handle": "#ffffff", "outline": "#4f1919",
-        "logo": "#ff3333", "title": "#ffcccc", "shadow": "#1a0000",
-        "switch_bg": "#ff3333"
+        "base": "#1a1111", "mantle": "#241616", "crust": "#0f0808",
+        "text": "#ffe6e6", "subtext": "#ff9999",
+        "surface0": "#3b2020", "surface1": "#522929",
+        "blue": "#ff4d4d", "red": "#ff4d4d", "green": "#10b981",
+        "slider": "#ff4d4d", "handle": "#ffe6e6", "outline": "#522929",
+        "logo": "#ff4d4d", "title": "#ffe6e6", "shadow": "#1a0505",
+        "switch_bg": "#ff4d4d"
     },
     "Dracula": {
         "base": "#282a36", "mantle": "#21222c", "crust": "#191a21",
@@ -40,9 +40,9 @@ THEMES = {
         "switch_bg": "#bd93f9"
     },
     "Viper": {
-        "base": "#051109", "mantle": "#081c10", "crust": "#000000",
-        "text": "#e2e8f0", "subtext": "#4ade80",
-        "surface0": "#0f2e1b", "surface1": "#14532d",
+        "base": "#050f08", "mantle": "#0a1f11", "crust": "#000000",
+        "text": "#e6ffee", "subtext": "#4ade80",
+        "surface0": "#12301c", "surface1": "#1b4529",
         "blue": "#22c55e", "red": "#ef4444", "green": "#22c55e",
         "slider": "#15803d", "handle": "#86efac", "outline": "#14532d",
         "logo": "#4ade80", "title": "#86efac", "shadow": "#001a05",
@@ -67,13 +67,13 @@ THEMES = {
         "switch_bg": "#eb6f92"
     },
     "Solaris": {
-        "base": "#0c0a00", "mantle": "#141100", "crust": "#000000",
-        "text": "#fffce6", "subtext": "#facc15",
-        "surface0": "#262203", "surface1": "#3f3908",
-        "blue": "#facc15", "red": "#f43f5e", "green": "#10b981",
-        "slider": "#ca8a04", "handle": "#fef08a", "outline": "#422006",
-        "logo": "#facc15", "title": "#fef08a", "shadow": "#1a1600",
-        "switch_bg": "#facc15"
+        "base": "#14120e", "mantle": "#1f1c16", "crust": "#0a0907",
+        "text": "#fffbeb", "subtext": "#fbbf24",
+        "surface0": "#332b1f", "surface1": "#4d402e",
+        "blue": "#fbbf24", "red": "#f43f5e", "green": "#10b981",
+        "slider": "#d97706", "handle": "#fde68a", "outline": "#4d402e",
+        "logo": "#fbbf24", "title": "#fffbeb", "shadow": "#1a1600",
+        "switch_bg": "#fbbf24"
     },
     "Catppuccin": {
         "base": "#1e1e2e", "mantle": "#181825", "crust": "#11111b",
@@ -89,11 +89,21 @@ THEMES = {
 class PresetManager:
     def __init__(self, config_dir, default_config=None):
         self.preset_dir = os.path.join(config_dir, "presets")
+        self.theme_dir = os.path.join(config_dir, "themes")
+
         if not os.path.exists(self.preset_dir):
             os.makedirs(self.preset_dir, exist_ok=True)
 
+        if not os.path.exists(self.theme_dir):
+            os.makedirs(self.theme_dir, exist_ok=True)
+
+        self.loaded_themes = {}
+        self.ensure_themes()
+        self.load_all_themes()
+
         self.active_theme_name = "Moonlight"
-        self.current_theme_data = THEMES["Moonlight"].copy()
+        self.current_theme_data = self.loaded_themes.get("Moonlight", {}).get("colors", DEFAULT_THEMES["Moonlight"]).copy()
+
         self.custom_overrides = {}
         self.default_config_ref = default_config
 
@@ -101,6 +111,68 @@ class PresetManager:
             def_path = os.path.join(self.preset_dir, "Default.json")
             if not os.path.exists(def_path):
                 self.reset_preset("Default")
+
+    def ensure_themes(self):
+        existing = glob.glob(os.path.join(self.theme_dir, "*.json"))
+
+        if not existing:
+            for name, colors in DEFAULT_THEMES.items():
+                data = {
+                    "name": name,
+                    "colors": colors
+                }
+                path = os.path.join(self.theme_dir, f"{name}.json")
+                try:
+                    with open(path, 'w', encoding='utf-8') as f:
+                        json.dump(data, f, indent=4)
+                except:
+                    pass
+        else:
+            for name, colors in DEFAULT_THEMES.items():
+                path = os.path.join(self.theme_dir, f"{name}.json")
+                if not os.path.exists(path):
+                    data = { "name": name, "colors": colors }
+                    try:
+                        with open(path, 'w', encoding='utf-8') as f:
+                            json.dump(data, f, indent=4)
+                    except:
+                        pass
+
+    def load_all_themes(self):
+        self.loaded_themes.clear()
+        files = glob.glob(os.path.join(self.theme_dir, "*.json"))
+        for fpath in files:
+            try:
+                with open(fpath, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+
+                filename = os.path.basename(fpath).replace(".json", "")
+
+                if "colors" in data:
+                    colors = data["colors"]
+                    display_name = data.get("name", filename)
+                else:
+                    colors = data
+                    display_name = filename
+
+                self.loaded_themes[filename] = {
+                    "display_name": display_name,
+                    "colors": colors
+                }
+            except:
+                pass
+
+        if not self.loaded_themes:
+            self.loaded_themes["Moonlight"] = {
+                "display_name": "Moonlight",
+                "colors": DEFAULT_THEMES["Moonlight"]
+            }
+
+    def get_available_themes(self):
+        themes = []
+        for key, val in self.loaded_themes.items():
+            themes.append((key, val["display_name"]))
+        return sorted(themes, key=lambda x: x[1])
 
     def get_presets(self):
         files = glob.glob(os.path.join(self.preset_dir, "*.json"))
@@ -122,7 +194,7 @@ class PresetManager:
         }
 
         try:
-            with open(path, 'w') as f:
+            with open(path, 'w', encoding='utf-8') as f:
                 json.dump(save_data, f, indent=4)
             return "success"
         except:
@@ -138,7 +210,7 @@ class PresetManager:
         }
         path = os.path.join(self.preset_dir, f"{name}.json")
         try:
-            with open(path, 'w') as f:
+            with open(path, 'w', encoding='utf-8') as f:
                 json.dump(cfg, f, indent=4)
             return True
         except:
@@ -149,7 +221,7 @@ class PresetManager:
         if not os.path.exists(path): return True
 
         try:
-            with open(path, 'r') as f:
+            with open(path, 'r', encoding='utf-8') as f:
                 saved = json.load(f)
 
             for key, val in current_cfg.items():
@@ -183,17 +255,17 @@ class PresetManager:
         path = os.path.join(self.preset_dir, f"{name}.json")
         if os.path.exists(path):
             try:
-                with open(path, 'r') as f:
+                with open(path, 'r', encoding='utf-8') as f:
                     data = json.load(f)
 
                 if '_theme_config' in data:
                     t_cfg = data['_theme_config']
                     saved_base = t_cfg.get('base', "Moonlight")
-                    if saved_base not in THEMES:
-                        saved_base = "Moonlight"
-
                     self.set_base_theme(saved_base)
                     self.custom_overrides = t_cfg.get('overrides', {})
+                else:
+                    self.set_base_theme("Moonlight")
+                    self.custom_overrides = {}
 
                 return data
             except:
@@ -208,11 +280,20 @@ class PresetManager:
             except: pass
 
     def set_base_theme(self, name):
-        if name in THEMES:
+        self.load_all_themes()
+
+        if name in self.loaded_themes:
             self.active_theme_name = name
-            self.current_theme_data = THEMES[name].copy()
+            self.current_theme_data = self.loaded_themes[name]["colors"].copy()
             self.custom_overrides.clear()
             return self.get_active_theme()
+
+        if "Moonlight" in self.loaded_themes:
+            self.active_theme_name = "Moonlight"
+            self.current_theme_data = self.loaded_themes["Moonlight"]["colors"].copy()
+            self.custom_overrides.clear()
+            return self.get_active_theme()
+
         return None
 
     def update_custom_color(self, key, hex_val):
