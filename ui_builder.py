@@ -2,6 +2,8 @@ import gi
 import os
 import tempfile
 import time
+import subprocess
+import sys
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
 from gi.repository import Gtk, Adw, GLib, Gdk
@@ -23,10 +25,12 @@ class MainWindow(Adw.ApplicationWindow):
         self._backend_config_func = backend_config
         self.backend_suspend = backend_suspend
         self.listener = listener
-        self.cfg = initial_config
         self.preset_mgr = preset_manager
         self.theme_cb = theme_cb
         self.preset_cb = preset_cb
+
+        loaded_default = self.preset_mgr.load_preset("Default")
+        self.cfg = loaded_default if loaded_default else initial_config
 
         self.active_preset_name = "Default"
         self.color_buttons = {}
@@ -102,8 +106,18 @@ class MainWindow(Adw.ApplicationWindow):
 
         root.append(self.stack)
 
-        self.update_logo_visuals()
+        self.update_ui_from_config(self.cfg)
         self.refresh_ui_mode()
+
+
+        base_theme = self.preset_mgr.active_theme_name
+        self.theme_cb(base_theme, is_custom=False)
+
+        for key, val in self.preset_mgr.custom_overrides.items():
+            self.theme_cb(key, is_custom=True, color_val=val)
+
+        self.refresh_color_pickers()
+        self.update_logo_visuals()
 
     def refresh_ui_mode(self):
         is_mouse = self.btn_mode_mouse.get_active()
@@ -369,9 +383,18 @@ class MainWindow(Adw.ApplicationWindow):
         box.set_margin_start(36)
         box.set_margin_end(36)
 
+        hbox_cfg_h = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         lbl_cfg = Gtk.Label(label="CONFIGURATIONS", xalign=0)
         lbl_cfg.set_css_classes(["h2"])
-        box.append(lbl_cfg)
+
+        btn_open_cfg = Gtk.Button(icon_name="folder-open-symbolic")
+        btn_open_cfg.set_css_classes(["icon-btn"])
+        btn_open_cfg.set_tooltip_text("Open Config Folder")
+        btn_open_cfg.connect("clicked", lambda x: self.on_open_folder(self.preset_mgr.preset_dir))
+
+        hbox_cfg_h.append(lbl_cfg)
+        hbox_cfg_h.append(btn_open_cfg)
+        box.append(hbox_cfg_h)
 
         input_card = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         input_card.set_css_classes(["create-config-box", "anim-enter"])
@@ -399,9 +422,18 @@ class MainWindow(Adw.ApplicationWindow):
 
         box.append(self.create_sep())
 
+        hbox_th_h = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         lbl_th = Gtk.Label(label="THEME GALLERY", xalign=0)
         lbl_th.set_css_classes(["h2"])
-        box.append(lbl_th)
+
+        btn_open_th = Gtk.Button(icon_name="folder-open-symbolic")
+        btn_open_th.set_css_classes(["icon-btn"])
+        btn_open_th.set_tooltip_text("Open Theme Folder")
+        btn_open_th.connect("clicked", lambda x: self.on_open_folder(self.preset_mgr.theme_dir))
+
+        hbox_th_h.append(lbl_th)
+        hbox_th_h.append(btn_open_th)
+        box.append(hbox_th_h)
 
         theme_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
         theme_card.set_css_classes(["card", "anim-enter-delay-2"])
@@ -413,11 +445,11 @@ class MainWindow(Adw.ApplicationWindow):
         grid.set_column_spacing(10)
         grid.set_row_spacing(10)
 
-        from managers import THEMES
-        for t_name in THEMES.keys():
-            btn = Gtk.Button(label=t_name.replace("Moonlight ", ""))
+        available_themes = self.preset_mgr.get_available_themes()
+        for filename, display_name in available_themes:
+            btn = Gtk.Button(label=display_name)
             btn.set_css_classes(["trigger-btn"])
-            btn.connect("clicked", lambda b, n=t_name: self.on_theme_preset_clicked(n))
+            btn.connect("clicked", lambda b, n=filename: self.on_theme_preset_clicked(n))
             grid.append(btn)
 
         theme_card.append(grid)
@@ -461,7 +493,19 @@ class MainWindow(Adw.ApplicationWindow):
 
         box.append(override_card)
         scroll.set_child(box)
+
+        self.refresh_color_pickers()
+
         return scroll
+
+    def on_open_folder(self, path):
+        try:
+            if sys.platform == 'win32':
+                os.startfile(path)
+            else:
+                subprocess.Popen(['xdg-open', path])
+        except Exception as e:
+            print(f"Failed to open folder: {e}")
 
     def on_theme_preset_clicked(self, name):
         self.theme_cb(name, is_custom=False)
@@ -486,11 +530,21 @@ class MainWindow(Adw.ApplicationWindow):
 
     def refresh_color_pickers(self):
         theme = self.preset_mgr.get_active_theme()
+        if not theme: return
+
         for key, btn in self.color_buttons.items():
             if key in theme:
+                c_str = theme[key]
+                if not c_str: continue
+                if not c_str.startswith("#"): c_str = "#" + c_str
+
                 c = Gdk.RGBA()
-                c.parse(theme[key])
-                btn.set_rgba(c)
+                if c.parse(c_str):
+                    btn.set_rgba(c)
+                else:
+                    fallback = Gdk.RGBA()
+                    fallback.parse("#FFFFFF")
+                    btn.set_rgba(fallback)
 
     def update_logo_visuals(self):
         theme = self.preset_mgr.get_active_theme()
