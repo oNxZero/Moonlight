@@ -80,6 +80,9 @@ Once installed, simply search for **Moonlight** in your application menu.
 The interface is split into simple controls:
 
 * **Master Switch:** The global safety. This must be **ON** for any clicks to register.
+* **Target Mode:**
+    * **Mouse:** Standard auto-clicking for Left and Right mouse buttons.
+    * **Keyboard:** Spams a specific keyboard key (e.g., `Space`, `F`) instead of clicking the mouse.
 * **Trigger Mode:**
     * **Toggle:** Press key to start clicking, press again to stop.
     * **Hold:** Clicks only while you physically hold the key down.
