@@ -661,6 +661,10 @@ class MainWindow(Adw.ApplicationWindow):
 
     def on_preset_save_existing(self, name):
         if self.preset_mgr.save_preset(name, self.cfg, check_exists=False) == "success":
+            if name == "Default":
+                # Persist the full active runtime config when Default is overwritten.
+                clean_cfg = {k: v for k, v in self.cfg.items() if k != '_theme_config'}
+                self.update_config(clean_cfg)
             self.active_preset_name = name
             self.refresh_presets()
 
@@ -752,9 +756,15 @@ class MainWindow(Adw.ApplicationWindow):
         if 'assist_wtap' in cfg: self.sw_wtap.set_active(cfg['assist_wtap'])
         if 'assist_blockhit' in cfg: self.sw_bh.set_active(cfg['assist_blockhit'])
 
-        if 'trigger_left' in cfg: self.btn_bind_left.set_label(self.listener.get_nice_name(cfg['trigger_left']))
-        if 'trigger_right' in cfg: self.btn_bind_right.set_label(self.listener.get_nice_name(cfg['trigger_right']))
-        if 'hide_key' in cfg: self.btn_hide.set_label(self.listener.get_nice_name(cfg['hide_key']))
+        if 'trigger_left' in cfg:
+            self.listener.trigger_left = cfg['trigger_left']
+            self.btn_bind_left.set_label(self.listener.get_nice_name(cfg['trigger_left']))
+        if 'trigger_right' in cfg:
+            self.listener.trigger_right = cfg['trigger_right']
+            self.btn_bind_right.set_label(self.listener.get_nice_name(cfg['trigger_right']))
+        if 'hide_key' in cfg:
+            self.listener.hide_key = cfg['hide_key']
+            self.btn_hide.set_label(self.listener.get_nice_name(cfg['hide_key']))
         if 'target_btn' in cfg:
              self.saved_target_code = cfg['target_btn']
              self.saved_target_name = self.listener.get_nice_name(self.saved_target_code)
@@ -762,6 +772,7 @@ class MainWindow(Adw.ApplicationWindow):
 
         if 'mode' in cfg:
             is_mouse = (cfg['mode'] == 'mouse')
+            self.listener.set_app_mode(cfg['mode'])
             self.btn_mode_mouse.set_active(is_mouse)
             self.btn_mode_kb.set_active(not is_mouse)
             self.refresh_ui_mode()
@@ -773,10 +784,12 @@ class MainWindow(Adw.ApplicationWindow):
 
         if 'trigger_mode' in cfg:
             is_tog = (cfg['trigger_mode'] == 'toggle')
+            self.listener.set_trigger_mode(cfg['trigger_mode'])
             self.btn_trig_tog.set_active(is_tog)
             self.btn_trig_hold.set_active(not is_tog)
 
-        self.update_config(cfg)
+        clean_cfg = {k: v for k, v in cfg.items() if k != '_theme_config'}
+        self.update_config(clean_cfg)
 
     def on_window_focus_change(self, win, _):
         is_focused = win.get_property("is-active")
@@ -886,12 +899,20 @@ class MainWindow(Adw.ApplicationWindow):
         self.is_binding = False
         self.last_bind_time = time.time()
         btn = None
-        if mode == "trigger_left": btn = self.btn_bind_left
-        elif mode == "trigger_right": btn = self.btn_bind_right
-        elif mode == "hide": btn = self.btn_hide
+        if mode == "trigger_left":
+            btn = self.btn_bind_left
+            self.cfg['trigger_left'] = code
+        elif mode == "trigger_right":
+            btn = self.btn_bind_right
+            self.cfg['trigger_right'] = code
+        elif mode == "hide":
+            btn = self.btn_hide
+            self.cfg['hide_key'] = code
         elif mode == "target":
             btn = self.btn_target
             self.saved_target_code = code
             self.saved_target_name = label
+            self.cfg['target_btn'] = code
             self.update_config({'target_btn': code})
         if btn: btn.set_label(label)
+        self.refresh_presets()
